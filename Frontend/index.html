@@ -3,178 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Rental CD Film UAS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>UAS Sister - Peminjaman Film</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; line-height: 1.6; background-color: #f4f4f4; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        .movie-card { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .hidden { display: none; }
+    </style>
 </head>
-<body class="bg-slate-100">
+<body>
 
-    <div id="authBox" class="max-w-md mx-auto mt-16 bg-white p-8 rounded-2xl shadow-xl border">
-        <h2 id="authTitle" class="text-3xl font-bold text-center text-blue-600 mb-6">Login Rental</h2>
-        <div class="space-y-4">
-            <input id="email" placeholder="Email" class="w-full border p-3 rounded-lg outline-blue-500">
-            <input id="username" placeholder="Username" class="w-full border p-3 rounded-lg hidden outline-blue-500">
-            <input id="password" type="password" placeholder="Password" class="w-full border p-3 rounded-lg outline-blue-500">
-            <button onclick="submitAuth()" id="authBtn" class="w-full bg-blue-600 text-white font-bold p-3 rounded-lg">Masuk</button>
-            <p class="text-center text-sm">
-                <span id="toggleText">Belum punya akun?</span> 
-                <button onclick="toggle()" id="toggleBtn" class="text-blue-600 font-bold hover:underline">Daftar</button>
-            </p>
-        </div>
-    </div>
+<div class="container" id="authSection">
+    <h2 id="formTitle">Login Pengguna</h2>
+    
+    <input type="email" id="email" placeholder="Email (contoh: tasya@mail.com)">
+    <input type="password" id="password" placeholder="Password">
+    
+    <button onclick="handleAuth()" id="authBtn">Login</button>
+    <p style="text-align: center;">
+        <a href="#" onclick="toggleAuth()" id="toggleText">Belum punya akun? Daftar di sini</a>
+    </p>
+</div>
 
-    <div id="dashboard" class="hidden max-w-6xl mx-auto space-y-6 mt-6 p-4">
-        <div class="flex justify-between items-center bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-600">
-            <h1 class="text-2xl font-bold">💿 RENTAL CD FILM ONLINE</h1>
-            <button onclick="location.reload()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold">Logout</button>
-        </div>
+<div class="container hidden" id="movieSection">
+    <h2>Daftar Film Tersedia</h2>
+    <div id="movieList">Sedang memuat film...</div>
+    <br>
+    <button onclick="logout()" style="background-color: #dc3545;">Logout</button>
+</div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-blue-500">
-                <h3 class="font-bold text-xl mb-4 text-blue-700">Koleksi CD Film</h3>
-                <div class="space-y-2 mb-6 bg-blue-50 p-4 rounded-lg">
-                    <input id="mTitle" placeholder="Judul Film" class="w-full border p-2 rounded">
-                    <input id="mGenre" placeholder="Genre Film" class="w-full border p-2 rounded">
-                    <input id="mStock" type="number" placeholder="Stok CD" class="w-full border p-2 rounded">
-                    <button onclick="addMovie()" class="w-full bg-blue-500 text-white p-2 rounded font-bold">+ Tambah CD</button>
-                </div>
-                <div id="listMovie" class="space-y-3"></div>
-            </div>
+<script>
+    // === 1. GANTI DENGAN LINK BACKEND VERCEL ANDA ===
+    const API_URL = "https://uas-sister-peminjaman-film-c8b6.vercel.app";
 
-            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-purple-500">
-                <h3 class="font-bold text-xl mb-4 text-purple-700">Data Penyewa CD</h3>
-                <div class="space-y-2 mb-6 bg-purple-50 p-4 rounded-lg">
-                    <input id="lMovieId" placeholder="ID Film" class="w-full border p-2 rounded">
-                    <input id="lName" placeholder="Nama Penyewa" class="w-full border p-2 rounded">
-                    <button onclick="addRental()" class="w-full bg-purple-500 text-white p-2 rounded font-bold">Proses Sewa</button>
-                </div>
-                <div id="listRental" class="space-y-3"></div>
-            </div>
-        </div>
-    </div>
+    let isLoginMode = true;
 
-    <script>
-        // Ganti URL ini dengan URL Backend Vercel Anda nanti
-        const API_URL = "https://uas-sister-peminjaman-film.vercel.app/"; 
+    function toggleAuth() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('formTitle').innerText = isLoginMode ? "Login Pengguna" : "Daftar Akun Baru";
+        document.getElementById('authBtn').innerText = isLoginMode ? "Login" : "Daftar";
+        document.getElementById('toggleText').innerText = isLoginMode ? "Belum punya akun? Daftar di sini" : "Sudah punya akun? Login";
+    }
 
-        let isLogin = true;
-        function toggle() {
-            isLogin = !isLogin;
-            document.getElementById('authTitle').innerText = isLogin ? 'Login' : 'Register';
-            document.getElementById('username').classList.toggle('hidden', isLogin);
-            document.getElementById('authBtn').innerText = isLogin ? 'Masuk' : 'Daftar Sekarang';
-            document.getElementById('toggleBtn').innerText = isLogin ? 'Daftar' : 'Login';
-        }
+    async function handleAuth() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
 
-        async function submitAuth() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const username = document.getElementById('username').value;
-            const path = isLogin ? 'login' : 'register';
+        if (!email || !password) return alert("Isi email dan password!");
 
-            const res = await fetch(`${API_URL}/auth/${path}`, {
+        try {
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ email, password, username })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
-            const result = await res.json();
-            alert(result.message);
-            if(res.ok && isLogin) {
-                document.getElementById('authBox').classList.add('hidden');
-                document.getElementById('dashboard').classList.remove('hidden');
-                refresh();
-            } else if(res.ok && !isLogin) toggle();
-        }
 
-        async function refresh() {
-            // Load Movies
-            const mRes = await fetch(`${API_URL}/movie/movies`);
-            const mData = await mRes.json();
-            document.getElementById('listMovie').innerHTML = mData.map(m => `
-                <div class="p-3 bg-slate-50 border rounded-lg flex justify-between items-center text-sm shadow-sm">
-                    <span><b>${m.title}</b> <br> <small class="text-blue-600 font-bold">ID: ${m.id} | Stok: ${m.stock} Keping</small></span>
-                    <div class="flex gap-2">
-                        <button onclick="editMovie(${m.id},'${m.title}',${m.stock})" class="text-blue-500">Edit</button>
-                        <button onclick="del(3001,'movie/movies',${m.id})" class="text-red-500">Hapus</button>
-                    </div>
-                </div>`).join('');
+            const data = await response.json();
 
-            // Load Rentals
-            const rRes = await fetch(`${API_URL}/rental/rentals`);
-            const rData = await rRes.json();
-            document.getElementById('listRental').innerHTML = rData.map(r => `
-                <div class="p-3 bg-slate-50 border rounded-lg flex justify-between items-center text-sm shadow-sm">
-                    <span><b>${r.customer_name}</b> <br> <small class="text-purple-600 font-bold">Film ID: ${r.movie_id}</small></span>
-                    <div class="flex gap-2">
-                        <button onclick="returnMovie(${r.id}, ${r.movie_id})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs">Selesai/Kembali</button>
-                    </div>
-                </div>`).join('');
-        }
-
-        async function addMovie() {
-            await fetch(`${API_URL}/movie/movies`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    title: document.getElementById('mTitle').value,
-                    genre: document.getElementById('mGenre').value,
-                    stock: document.getElementById('mStock').value
-                })
-            });
-            refresh();
-        }
-
-        async function addRental() {
-            const movie_id = document.getElementById('lMovieId').value;
-            const res = await fetch(`${API_URL}/movie/movies/${movie_id}`);
-            const movie = await res.json();
-            if(movie && movie.stock > 0) {
-                await fetch(`${API_URL}/movie/movies/${movie_id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ stock: movie.stock - 1 })
-                });
-                await fetch(`${API_URL}/rental/rentals`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ movie_id, customer_name: document.getElementById('lName').value })
-                });
-                refresh();
-            } else { alert("CD Film tidak tersedia!"); }
-        }
-
-        async function returnMovie(rentId, movieId) {
-            const res = await fetch(`${API_URL}/movie/movies/${movieId}`);
-            const movie = await res.json();
-            await fetch(`${API_URL}/movie/movies/${movieId}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ stock: parseInt(movie.stock) + 1 })
-            });
-            await fetch(`${API_URL}/rental/rentals/${rentId}`, { method: 'DELETE' });
-            refresh();
-        }
-
-        async function editMovie(id, oldT, oldS) {
-            const nT = prompt("Judul Film Baru:", oldT);
-            const nS = prompt("Stok Baru:", oldS);
-            if(nT) {
-                await fetch(`${API_URL}/movie/movies/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ title: nT, stock: nS })
-                });
-                refresh();
+            if (response.ok) {
+                alert(data.message);
+                if (isLoginMode) {
+                    showMovies(); // Jika login sukses, tampilkan daftar film
+                } else {
+                    toggleAuth(); // Jika register sukses, pindah ke mode login
+                }
+            } else {
+                alert("Error: " + data.message);
             }
+        } catch (error) {
+            console.error(error);
+            alert("Gagal terhubung ke API. Pastikan API_URL benar dan Backend sudah jalan.");
         }
+    }
 
-        async function del(port, path, id) {
-            if(confirm("Hapus data ini?")) {
-                await fetch(`${API_URL}/${path}/${id}`, { method: 'DELETE' });
-                refresh();
+    async function showMovies() {
+        document.getElementById('authSection').classList.add('hidden');
+        document.getElementById('movieSection').classList.remove('hidden');
+
+        try {
+            const response = await fetch(`${API_URL}/movie/movies`);
+            const movies = await response.json();
+            const listDiv = document.getElementById('movieList');
+            listDiv.innerHTML = "";
+
+            if (movies.length === 0) {
+                listDiv.innerHTML = "Tidak ada film tersedia di database.";
+            } else {
+                movies.forEach(m => {
+                    listDiv.innerHTML += `
+                        <div class="movie-card">
+                            <strong>${m.title}</strong><br>
+                            Genre: ${m.genre}
+                        </div>`;
+                });
             }
+        } catch (error) {
+            document.getElementById('movieList').innerHTML = "Gagal mengambil data film.";
         }
-    </script>
+    }
+
+    function logout() {
+        location.reload(); // Segarkan halaman untuk kembali ke menu login
+    }
+</script>
+
 </body>
-
 </html>
-
