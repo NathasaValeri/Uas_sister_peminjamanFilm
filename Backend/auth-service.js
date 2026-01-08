@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const sequelize = new Sequelize('mysql://root:EyuPGVRitFScKqqCdVmdXrUtjAYtjmLJ@mainline.proxy.rlwy.net:49790/railway');
+const sequelize = new Sequelize(process.env.DATABASE_URL, {dialect: 'mysql');
 
 const User = sequelize.define('User', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -27,5 +27,6 @@ app.post('/login', async (req, res) => {
     if (user) res.json({ message: "Selamat Datang Admin Rental!", user });
     else res.status(401).json({ message: "Email/Password salah!" });
 });
+
 
 app.listen(3000, () => console.log('Auth Service: 3000'));
