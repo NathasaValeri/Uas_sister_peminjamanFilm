@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "auth-service.js", "use": "@vercel/node" },
+    { "src": "movie-service.js", "use": "@vercel/node" },
+    { "src": "rental-service.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/auth/(.*)", "dest": "auth-service.js" },
+    { "src": "/movie/(.*)", "dest": "movie-service.js" },
+    { "src": "/rental/(.*)", "dest": "rental-service.js" }
+  ]
+}
