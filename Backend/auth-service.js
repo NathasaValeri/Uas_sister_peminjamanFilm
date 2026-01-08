@@ -1,49 +1,47 @@
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
-const cors = require('cors');
+const cors = require('cors'); // 1. Tambahkan ini
 const app = express();
 
-app.use(cors());
+app.use(cors()); // 2. Tambahkan ini agar frontend bisa akses
 app.use(express.json());
 
-// KONEKSI DATABASE (Otomatis ambil dari Vercel Environment Variables)
+// 3. Gunakan process.env agar koneksi ke Railway aman
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'mysql',
-  logging: false,
-  dialectOptions: {
-    ssl: { rejectUnauthorized: false }
-  }
+    dialect: 'mysql',
+    dialectOptions: {
+        ssl: { rejectUnauthorized: false } // Wajib untuk Railway
+    }
 });
 
-// MODEL USER
+// Model harus sesuai dengan input di index.html Anda (email, username, password)
 const User = sequelize.define('User', {
-  email: { type: DataTypes.STRING, allowNull: false, unique: true },
-  password: { type: DataTypes.STRING, allowNull: false }
+    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+    username: { type: DataTypes.STRING },
+    password: { type: DataTypes.STRING, allowNull: false }
 });
 
-// SYNC DATABASE
 sequelize.sync();
 
-// ENDPOINT REGISTER
+// Endpoint Register
 app.post('/auth/register', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.create({ email, password });
-    res.json({ message: "Pendaftaran Berhasil", user });
-  } catch (err) {
-    res.status(400).json({ message: "Email sudah terdaftar atau error", error: err.message });
-  }
+    try {
+        const user = await User.create(req.body);
+        res.status(201).json({ message: "Berhasil Daftar!", user });
+    } catch (err) {
+        res.status(400).json({ message: "Gagal: " + err.message });
+    }
 });
 
-// ENDPOINT LOGIN
+// Endpoint Login
 app.post('/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ where: { email, password } });
-  if (user) {
-    res.json({ message: "Login Berhasil", token: "token-dummy-123" });
-  } else {
-    res.status(401).json({ message: "Email atau password salah" });
-  }
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email, password } });
+    if (user) {
+        res.json({ message: "Berhasil Masuk!", user });
+    } else {
+        res.status(401).json({ message: "Email atau Password Salah!" });
+    }
 });
 
 module.exports = app;
