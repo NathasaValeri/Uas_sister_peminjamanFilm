@@ -3,7 +3,8 @@
   "builds": [
     { "src": "Backend/auth-service.js", "use": "@vercel/node" },
     { "src": "Backend/movie-service.js", "use": "@vercel/node" },
-    { "src": "Backend/rental-service.js", "use": "@vercel/node" }
+    { "src": "Backend/rental-service.js", "use": "@vercel/node" },
+    { "src": "Frontend/index.html", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/auth/(.*)", "dest": "Backend/auth-service.js" },
