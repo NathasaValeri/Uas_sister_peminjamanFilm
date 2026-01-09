@@ -11,9 +11,9 @@
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #0056b3; }
-        #message { margin-top: 15px; text-align: center; font-size: 14px; }
-        .success { color: green; }
-        .error { color: red; }
+        #message { margin-top: 15px; text-align: center; font-size: 14px; min-height: 20px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -31,10 +31,6 @@
 </div>
 
 <script>
-    // PENJELASAN PENTING:
-    // Di Vercel, kita menggunakan rute relatif agar otomatis mengikuti domain kita.
-    // fetch('/auth/login') akan otomatis memanggil https://domain-anda.vercel.app/auth/login
-    
     async function handleAuth(type) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
@@ -45,31 +41,42 @@
             return;
         }
 
-        messageDiv.innerHTML = "Sedang memproses...";
+        messageDiv.innerHTML = "Processing...";
 
         try {
-            // Gunakan path /auth/ sesuai dengan 'source' di vercel.json
+            // Gunakan path /auth/ (sesuai vercel.json) 
+            // Jika tetap 404, Anda bisa mencoba ganti menjadi: `/api/auth-service`
             const endpoint = type === 'login' ? '/auth/login' : '/auth/register';
             
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ email, password })
             });
 
+            // Ambil data JSON
             const data = await response.json();
 
             if (response.ok) {
                 messageDiv.innerHTML = `<span class='success'>Berhasil ${type}!</span>`;
-                console.log('Success:', data);
-                // Jika login berhasil, bisa diarahkan ke dashboard
-                // window.location.href = '/dashboard.html';
+                console.log('Server Response:', data);
+                
+                if(type === 'login') {
+                    // Opsional: Simpan session dan pindah halaman
+                    // localStorage.setItem('token', data.token);
+                    // window.location.href = '/dashboard.html';
+                }
             } else {
+                // Pesan error dari backend (contoh: "Email sudah terdaftar")
                 messageDiv.innerHTML = `<span class='error'>${data.message || 'Gagal akses server'}</span>`;
             }
         } catch (error) {
-            console.error('Error Details:', error);
-            messageDiv.innerHTML = "<span class='error'>Server tidak merespons. Pastikan Backend sudah aktif!</span>";
+            console.error('Koneksi Error:', error);
+            // Ini akan muncul jika URL salah (404) atau server crash (500)
+            messageDiv.innerHTML = "<span class='error'>Koneksi gagal. Cek tab Network di Inspect Element!</span>";
         }
     }
 </script>
