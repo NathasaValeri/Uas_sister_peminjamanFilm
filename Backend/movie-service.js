@@ -1,31 +1,34 @@
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
-const cors = require('cors');
-
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-const sequelize = new Sequelize('mysql://root:EyuPGVRitFScKqqCdVmdXrUtjAYtjmLJ@mainline.proxy.rlwy.net:49790/railway');
+const sequelize = new Sequelize(
+  'bwzvhs015jo4jophzplb',
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
+  {
+    host: 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com',
+    dialect: 'mysql',
+    port: 3306,
+    logging: false,
+    dialectOptions: { ssl: { rejectUnauthorized: false } }
+  }
+);
 
-// Menggunakan tabel 'movies'
 const Movie = sequelize.define('Movie', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    title: { type: DataTypes.STRING, allowNull: false },
-    genre: { type: DataTypes.STRING, allowNull: false }, // Pengganti Author
-    stock: { type: DataTypes.INTEGER, allowNull: false }
-}, { tableName: 'movies', timestamps: false });
+  title: DataTypes.STRING,
+  genre: DataTypes.STRING,
+  stock: DataTypes.INTEGER
+}, { timestamps: false });
 
-app.get('/movies', async (req, res) => res.json(await Movie.findAll()));
-app.get('/movies/:id', async (req, res) => res.json(await Movie.findByPk(req.params.id)));
-app.post('/movies', async (req, res) => res.json(await Movie.create(req.body)));
-app.put('/movies/:id', async (req, res) => {
-    await Movie.update(req.body, { where: { id: req.params.id } });
-    res.json({ message: "Koleksi CD Diperbarui" });
-});
-app.delete('/movies/:id', async (req, res) => {
-    await Movie.destroy({ where: { id: req.params.id } });
-    res.json({ message: "CD Film Dihapus" });
+// Get All Movies
+app.get('/movies/all', async (req, res) => {
+  const movies = await Movie.findAll();
+  res.json(movies);
 });
 
-app.listen(3001, () => console.log('Movie Service: 3001'));
+const PORT = process.env.PORT || 3001; // Port cadangan jika running lokal
+sequelize.sync().then(() => {
+  app.listen(PORT, () => console.log(`Movie Service running on port ${PORT}`));
+});
