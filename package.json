@@ -1,7 +1,13 @@
 {
   "name": "uas-peminjaman-film",
   "version": "1.0.0",
+  "description": "Project UAS Peminjaman Film",
+  "main": "index.html",
   "scripts": {
-    "start": "node api/auth-service.js"
-  }
+    "start": "node api/auth-service.js",
+    "build": "echo 'No build step required'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
