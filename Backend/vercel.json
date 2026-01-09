@@ -7,7 +7,7 @@
   ],
   "routes": [
     { "src": "/auth/(.*)", "dest": "auth-service.js" },
-    { "src": "/movie/(.*)", "dest": "movie-service.js" },
-    { "src": "/rental/(.*)", "dest": "rental-service.js" }
+    { "src": "/movies/(.*)", "dest": "movie-service.js" },
+    { "src": "/rentals/(.*)", "dest": "rental-service.js" }
   ]
 }
