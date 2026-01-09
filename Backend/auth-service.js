@@ -1,47 +1,40 @@
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
-const cors = require('cors'); // 1. Tambahkan ini
 const app = express();
-
-app.use(cors()); // 2. Tambahkan ini agar frontend bisa akses
 app.use(express.json());
 
-// 3. Gunakan process.env agar koneksi ke Railway aman
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+// --- PERBAIKAN KONEKSI DATABASE ---
+const sequelize = new Sequelize(
+  'bwzvhs015jo4jophzplb',        
+  process.env.DB_USER,           
+  process.env.DB_PASSWORD,       
+  {
+    host: 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com',
     dialect: 'mysql',
+    port: 3306,
+    logging: false,
     dialectOptions: {
-        ssl: { rejectUnauthorized: false } // Wajib untuk Railway
+      ssl: { rejectUnauthorized: false }
     }
-});
+  }
+);
 
-// Model harus sesuai dengan input di index.html Anda (email, username, password)
 const User = sequelize.define('User', {
-    email: { type: DataTypes.STRING, allowNull: false, unique: true },
-    username: { type: DataTypes.STRING },
-    password: { type: DataTypes.STRING, allowNull: false }
-});
+  username: { type: DataTypes.STRING, allowNull: false },
+  email: { type: DataTypes.STRING, unique: true },
+  password: { type: DataTypes.STRING }
+}, { timestamps: false });
 
-sequelize.sync();
-
-// Endpoint Register
-app.post('/auth/register', async (req, res) => {
-    try {
-        const user = await User.create(req.body);
-        res.status(201).json({ message: "Berhasil Daftar!", user });
-    } catch (err) {
-        res.status(400).json({ message: "Gagal: " + err.message });
-    }
-});
-
-// Endpoint Login
+// Endpoint Login (Contoh)
 app.post('/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    const user = await User.findOne({ where: { email, password } });
-    if (user) {
-        res.json({ message: "Berhasil Masuk!", user });
-    } else {
-        res.status(401).json({ message: "Email atau Password Salah!" });
-    }
+  const { email, password } = req.body;
+  const user = await User.findOne({ where: { email, password } });
+  if (user) res.json({ message: "Login Berhasil", user });
+  else res.status(401).json({ message: "Email atau Password Salah" });
 });
 
-module.exports = app;
+// --- PERBAIKAN PORT ---
+const PORT = process.env.PORT || 3000;
+sequelize.sync().then(() => {
+  app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
+});
