@@ -1,8 +1,7 @@
 {
-  "name": "uas-sister-peminjaman-film",
+  "name": "uas-peminjaman-film",
   "version": "1.0.0",
-  "description": "Project Fullstack Vercel",
   "scripts": {
-    "start": "node Backend/auth-service.js"
+    "start": "node api/auth-service.js"
   }
 }
