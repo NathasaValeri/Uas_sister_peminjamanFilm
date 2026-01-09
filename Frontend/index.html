@@ -2,10 +2,11 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>UAS Sister - Rental CD Film</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAS Sister - Rental CD Film Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-8">
+<body class="bg-gray-100 p-4 md:p-8">
     <div id="authSection" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
         <h2 id="authTitle" class="text-2xl font-bold mb-4 text-center">Login Admin</h2>
         <input id="email" placeholder="Email" class="w-full border p-2 mb-2 rounded">
@@ -17,7 +18,7 @@
 
     <div id="dashboard" class="hidden max-w-6xl mx-auto">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">💿 Sistem Rental CD Film</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">💿 Sistem Rental CD Film</h1>
             <button onclick="location.reload()" class="bg-red-500 text-white px-4 py-2 rounded font-bold">Logout</button>
         </div>
 
@@ -46,10 +47,14 @@
     </div>
 
     <script>
+        // --- 1. KONFIGURASI LINK VERCEL ANDA ---
+        // Ganti 'uas-rental-cd-anda.vercel.app' dengan link asli dari dashboard Vercel Anda
+        const BASE_URL = window.location.origin; 
+
         const API = {
-            auth: "http://localhost:3000/auth",
-            movie: "http://localhost:3001/movie",
-            rental: "http://localhost:3002/rental"
+            auth: `${BASE_URL}/auth`,
+            movie: `${BASE_URL}/movies`,
+            rental: `${BASE_URL}/rentals`
         };
 
         let isLoginMode = true;
@@ -61,11 +66,14 @@
             document.getElementById('toggleBtn').innerText = isLoginMode ? "Belum punya akun? Daftar" : "Sudah punya akun? Login";
         }
 
+        // --- 2. FUNGSI AUTENTIKASI ---
         async function handleAuth() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const username = document.getElementById('username').value;
             const target = isLoginMode ? 'login' : 'register';
+
+            if(!email || !password) return alert("Lengkapi email dan password!");
 
             try {
                 const res = await fetch(`${API.auth}/${target}`, {
@@ -74,61 +82,63 @@
                     body: JSON.stringify({ email, password, username })
                 });
                 const data = await res.json();
-                alert(data.message);
-                if(res.ok && isLoginMode) {
-                    document.getElementById('authSection').classList.add('hidden');
-                    document.getElementById('dashboard').classList.remove('hidden');
-                    refreshData();
-                } else if (res.ok && !isLoginMode) toggleAuth();
-            } catch (err) { alert("Auth Service tidak aktif!"); }
+                
+                if(res.ok) {
+                    alert(isLoginMode ? "Login Berhasil!" : "Pendaftaran Berhasil! Silakan Login.");
+                    if(isLoginMode) {
+                        document.getElementById('authSection').classList.add('hidden');
+                        document.getElementById('dashboard').classList.remove('hidden');
+                        refreshData();
+                    } else {
+                        toggleAuth();
+                    }
+                } else {
+                    alert("Gagal: " + data.message);
+                }
+            } catch (err) { 
+                alert("Server tidak merespon. Pastikan Backend sudah dideploy!"); 
+            }
         }
 
+        // --- 3. AMBIL DATA DARI DATABASE ---
         async function refreshData() {
             try {
                 // Load Movies
-                const mRes = await fetch(`${API.movie}/movies`);
+                const mRes = await fetch(`${API.movie}/all`); // Menggunakan /all sesuai backend kita
                 const movies = await mRes.json();
                 document.getElementById('movieList').innerHTML = movies.map(m => `
                     <div class="p-3 bg-gray-50 border rounded flex justify-between items-center text-sm shadow-sm">
                         <span><b>${m.title}</b> (ID: ${m.id}) <br> Stok: ${m.stock}</span>
                         <div class="flex gap-2">
-                            <button onclick="updateMovie(${m.id}, '${m.title}', ${m.stock})" class="text-blue-500 font-semibold">Edit</button>
                             <button onclick="deleteMovie(${m.id})" class="text-red-500 font-semibold">Hapus</button>
                         </div>
                     </div>
                 `).join('');
 
-                // Load Rentals (PENAMBAHAN TANGGAL & BUTTON SELESAI)
-                const rRes = await fetch(`${API.rental}/rentals`);
+                // Load Rentals
+                const rRes = await fetch(`${API.rental}/all`);
                 const rentals = await rRes.json();
-                document.getElementById('rentalList').innerHTML = rentals.map(r => {
-                    const date = new Date(r.rental_date).toLocaleString('id-ID');
-                    return `
+                document.getElementById('rentalList').innerHTML = rentals.map(r => `
                     <div class="p-3 bg-purple-50 border border-purple-100 rounded shadow-sm text-sm">
                         <div class="flex justify-between items-start">
                             <span>
                                 <b class="text-purple-700">${r.customer_name}</b><br>
-                                <small class="text-gray-500">Meminjam ID Film: ${r.movie_id}</small><br>
-                                <small class="text-gray-400 italic">Tgl: ${date}</small>
+                                <small class="text-gray-500">ID Film: ${r.movie_id}</small>
                             </span>
-                            <button onclick="finishRental(${r.id}, ${r.movie_id})" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">Selesai</button>
+                            <button onclick="finishRental(${r.id}, ${r.movie_id})" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold">Selesai</button>
                         </div>
-                        <div class="flex gap-4 mt-2 border-t pt-2 border-purple-200">
-                            <button onclick="editRental(${r.id}, '${r.customer_name}')" class="text-blue-600 text-xs font-semibold hover:underline">Edit Nama</button>
-                            <button onclick="deleteRentalOnly(${r.id})" class="text-red-600 text-xs font-semibold hover:underline">Hapus Data</button>
-                        </div>
-                    </div>`;
-                }).join('');
-            } catch (e) { console.error("Refresh failed"); }
+                    </div>
+                `).join('');
+            } catch (e) { console.error("Refresh data failed"); }
         }
 
-        // --- FUNGSI MOVIE ---
+        // --- 4. FUNGSI KOLEKSI CD ---
         async function addMovie() {
             const title = document.getElementById('mTitle').value;
             const genre = document.getElementById('mGenre').value;
             const stock = document.getElementById('mStock').value;
-            if(!title || !genre || !stock) return alert("Lengkapi data film!");
-            await fetch(`${API.movie}/movies`, {
+            
+            await fetch(`${API.movie}/add`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ title, genre, stock: parseInt(stock) })
@@ -136,87 +146,36 @@
             refreshData();
         }
 
-        async function updateMovie(id, title, stock) {
-            const nTitle = prompt("Judul baru:", title);
-            const nStock = prompt("Stok baru:", stock);
-            if(nTitle && nStock) {
-                await fetch(`${API.movie}/movies/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ title: nTitle, stock: parseInt(nStock) })
-                });
-                refreshData();
-            }
-        }
-
         async function deleteMovie(id) {
-            if(confirm("Hapus CD Film dari koleksi?")) {
-                await fetch(`${API.movie}/movies/${id}`, { method: 'DELETE' });
+            if(confirm("Hapus film ini?")) {
+                await fetch(`${API.movie}/delete/${id}`, { method: 'DELETE' });
                 refreshData();
             }
         }
 
-        // --- FUNGSI RENTAL ---
+        // --- 5. FUNGSI PEMINJAMAN ---
         async function addRental() {
             const movie_id = document.getElementById('rMovieId').value;
             const customer_name = document.getElementById('rName').value;
-            if(!movie_id || !customer_name) return alert("Isi ID Film dan Nama Penyewa!");
-
-            const res = await fetch(`${API.movie}/movies/${movie_id}`);
-            if(!res.ok) return alert("ID Film tidak ditemukan!");
-            const movie = await res.json();
-
-            if(movie && movie.stock > 0) {
-                // Kurangi stok
-                await fetch(`${API.movie}/movies/${movie_id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ stock: movie.stock - 1 })
-                });
-                // Buat data sewa
-                await fetch(`${API.rental}/rentals`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ movie_id: parseInt(movie_id), customer_name })
-                });
+            
+            const res = await fetch(`${API.rental}/add`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ movie_id: parseInt(movie_id), customer_name })
+            });
+            
+            if(res.ok) {
+                alert("Peminjaman Berhasil!");
                 refreshData();
-            } else { alert("Stok habis!"); }
-        }
-
-        async function editRental(id, oldName) {
-            const newName = prompt("Ubah Nama Penyewa:", oldName);
-            if(newName) {
-                // Pastikan endpoint PUT /rentals/:id ada di rental-service.js
-                await fetch(`${API.rental}/rentals/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ customer_name: newName })
-                });
-                refreshData();
-            }
-        }
-
-        async function deleteRentalOnly(id) {
-            if(confirm("Hapus transaksi ini tanpa mengembalikan stok?")) {
-                await fetch(`${API.rental}/rentals/${id}`, { method: 'DELETE' });
-                refreshData();
+            } else {
+                alert("Gagal memproses sewa.");
             }
         }
 
         async function finishRental(rentId, movieId) {
-            try {
-                const res = await fetch(`${API.movie}/movies/${movieId}`);
-                const movie = await res.json();
-                // Tambah stok kembali
-                await fetch(`${API.movie}/movies/${movieId}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ stock: parseInt(movie.stock) + 1 })
-                });
-                // Hapus data sewa
-                await fetch(`${API.rental}/rentals/${rentId}`, { method: 'DELETE' });
-                refreshData();
-            } catch (err) { alert("Gagal memproses pengembalian"); }
+            // Hapus data rental (Anggap selesai)
+            await fetch(`${API.rental}/delete/${rentId}`, { method: 'DELETE' });
+            refreshData();
         }
     </script>
 </body>
