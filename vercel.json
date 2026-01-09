@@ -1,14 +1,13 @@
 {
   "version": 2,
   "builds": [
-    { "src": "Backend/auth-service.js", "use": "@vercel/node" },
-    { "src": "Backend/movie-service.js", "use": "@vercel/node" },
-    { "src": "Backend/rental-service.js", "use": "@vercel/node" }
+    { "src": "Backend/*.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/auth/(.*)", "dest": "Backend/auth-service.js" },
     { "src": "/movies/(.*)", "dest": "Backend/movie-service.js" },
     { "src": "/rentals/(.*)", "dest": "Backend/rental-service.js" },
-    { "src": "/(.*)", "dest": "Frontend/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
