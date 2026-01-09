@@ -1,9 +1,7 @@
 {
   "version": 2,
   "builds": [
-    { "src": "Backend/auth-service.js", "use": "@vercel/node" },
-    { "src": "Backend/movie-service.js", "use": "@vercel/node" },
-    { "src": "Backend/rental-service.js", "use": "@vercel/node" },
+    { "src": "Backend/*.js", "use": "@vercel/node" },
     { "src": "Frontend/index.html", "use": "@vercel/static" }
   ],
   "routes": [
