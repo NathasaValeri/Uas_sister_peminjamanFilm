@@ -8,6 +8,6 @@
     { "src": "/auth/(.*)", "dest": "Backend/auth-service.js" },
     { "src": "/movies/(.*)", "dest": "Backend/movie-service.js" },
     { "src": "/rentals/(.*)", "dest": "Backend/rental-service.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "index.html" }
   ]
 }
