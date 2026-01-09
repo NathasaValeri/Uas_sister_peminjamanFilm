@@ -1,40 +1,44 @@
 const express = require('express');
-const { Sequelize, DataTypes } = require('sequelize');
+const mysql = require('mysql2');
+const cors = require('cors');
 const app = express();
+
+app.use(cors());
 app.use(express.json());
 
-// --- PERBAIKAN KONEKSI DATABASE ---
-const sequelize = new Sequelize(
-  'bwzvhs015jo4jophzplb',        
-  process.env.DB_USER,           
-  process.env.DB_PASSWORD,       
-  {
-    host: 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com',
-    dialect: 'mysql',
-    port: 3306,
-    logging: false,
-    dialectOptions: {
-      ssl: { rejectUnauthorized: false }
-    }
-  }
-);
-
-const User = sequelize.define('User', {
-  username: { type: DataTypes.STRING, allowNull: false },
-  email: { type: DataTypes.STRING, unique: true },
-  password: { type: DataTypes.STRING }
-}, { timestamps: false });
-
-// Endpoint Login (Contoh)
-app.post('/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ where: { email, password } });
-  if (user) res.json({ message: "Login Berhasil", user });
-  else res.status(401).json({ message: "Email atau Password Salah" });
+// Koneksi ke Clever Cloud menggunakan Environment Variables di Vercel
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: 3306
 });
 
-// --- PERBAIKAN PORT ---
-const PORT = process.env.PORT || 3000;
-sequelize.sync().then(() => {
-  app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
+db.connect((err) => {
+    if (err) console.error("Database Connection Error: " + err.message);
+    else console.log("Terhubung ke MySQL Clever Cloud!");
 });
+
+// Endpoint Register
+app.post('/auth/register', (req, res) => {
+    const { email, password } = req.body;
+    const query = "INSERT INTO users (email, password) VALUES (?, ?)";
+    db.query(query, [email, password], (err, result) => {
+        if (err) return res.status(500).json({ message: "Gagal Register", error: err });
+        res.status(200).json({ message: "User Terdaftar!" });
+    });
+});
+
+// Endpoint Login
+app.post('/auth/login', (req, res) => {
+    const { email, password } = req.body;
+    const query = "SELECT * FROM users WHERE email = ? AND password = ?";
+    db.query(query, [email, password], (err, results) => {
+        if (err) return res.status(500).json({ message: "Error Server", error: err });
+        if (results.length > 0) res.status(200).json({ message: "Login Berhasil", user: results[0] });
+        else res.status(401).json({ message: "Email atau Password Salah" });
+    });
+});
+
+module.exports = app;
