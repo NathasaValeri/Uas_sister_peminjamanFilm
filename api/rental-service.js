@@ -1,95 +1,97 @@
+require('dotenv').config();
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
 const cors = require('cors');
+
 const app = express();
-
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
-// 1. Konfigurasi Database (Gunakan Environment Variables Vercel)
+// --- KONEKSI DATABASE ---
 const sequelize = new Sequelize(
-    process.env.DB_NAME, 
+    'bwzvhs015jo4jophzplb',
     process.env.DB_USER,
     process.env.DB_PASSWORD,
     {
-        host: process.env.DB_HOST,
+        host: 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com',
         dialect: 'mysql',
         port: 3306,
         logging: false,
-        dialectOptions: { 
-            ssl: { rejectUnauthorized: false } 
-        },
-        // Optimasi untuk Vercel Serverless
-        pool: {
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        }
+        dialectOptions: { ssl: { rejectUnauthorized: false } }
     }
 );
 
-// 2. Model Rental
+// --- MODEL RENTAL ---
+// Mengaktifkan timestamps: true agar kolom createdAt otomatis ada dan terisi tanggal saat ini
 const Rental = sequelize.define('Rental', {
-    movie_id: DataTypes.INTEGER,
-    customer_name: DataTypes.STRING,
-    rental_date: { 
-        type: DataTypes.DATE, 
-        defaultValue: Sequelize.NOW 
-    }
+    movie_id: { type: DataTypes.INTEGER, allowNull: false },
+    customer_name: { type: DataTypes.STRING, allowNull: false }
 }, { 
-    tableName: 'rentals', 
-    timestamps: false 
+    timestamps: true // Ini kunci agar tanggal muncul otomatis sebagai 'createdAt'
 });
 
-// OTO-SINKRON: Membuat tabel secara otomatis jika belum ada di Clever Cloud
-sequelize.sync()
-    .then(() => console.log("Tabel Rentals siap digunakan!"))
-    .catch(err => console.error("Gagal sinkronisasi DB Rentals: ", err));
-
-// 3. Endpoint: Ambil Semua Data Peminjaman (GET /rentals/all)
-app.get('/rentals/all', async (req, res) => {
-    try {
-        const rentals = await Rental.findAll();
-        res.json(rentals);
-    } catch (error) {
-        res.status(500).json({ message: "Gagal mengambil data", error: error.message });
-    }
-});
-
-// 4. Endpoint: Tambah Peminjaman (POST /rentals/add)
+// 1. [CREATE] Catat Peminjaman Baru
 app.post('/rentals/add', async (req, res) => {
     try {
         const { movie_id, customer_name } = req.body;
-        
-        if (!movie_id || !customer_name) {
-            return res.status(400).json({ message: "Data tidak lengkap" });
-        }
-
-        const rental = await Rental.create({ 
-            movie_id: parseInt(movie_id), 
-            customer_name 
-        });
-        res.status(200).json({ message: "Peminjaman berhasil dicatat", rental });
-    } catch (error) {
-        res.status(500).json({ message: "Gagal mencatat peminjaman", error: error.message });
+        // createdAt akan terisi otomatis oleh Sequelize
+        const rental = await Rental.create({ movie_id, customer_name });
+        res.status(201).json({ message: "Peminjaman dicatat", rental });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
-// 5. Endpoint: Hapus Peminjaman (DELETE /rentals/delete/:id)
-app.delete('/rentals/delete/:id', async (req, res) => {
+// 2. [READ] Ambil Semua Riwayat Peminjaman
+app.get('/rentals/all', async (req, res) => {
+    try {
+        // Mengurutkan dari yang terbaru (DESC) agar tanggal terbaru di atas
+        const rentals = await Rental.findAll({ order: [['createdAt', 'DESC']] });
+        res.json(rentals);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. [UPDATE] Edit Nama Pelanggan (Baru Ditambahkan)
+app.put('/rentals/update/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const deleted = await Rental.destroy({ where: { id: id } });
+        const { customer_name } = req.body;
+        const rental = await Rental.findByPk(id);
         
-        if (deleted) {
-            res.json({ message: "Data peminjaman dihapus" });
+        if (rental) {
+            await rental.update({ customer_name });
+            res.json({ message: "Nama pelanggan diperbarui!", rental });
         } else {
             res.status(404).json({ message: "Data tidak ditemukan" });
         }
-    } catch (error) {
-        res.status(500).json({ message: "Gagal menghapus data", error: error.message });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
+});
+
+// 4. [DELETE] Hapus/Selesaikan Peminjaman
+app.delete('/rentals/delete/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const rental = await Rental.findByPk(id);
+        if (rental) {
+            await rental.destroy();
+            res.json({ message: "Data peminjaman dihapus!" });
+        } else {
+            res.status(404).json({ message: "Data tidak ditemukan" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- RUN SERVER ---
+const PORT = 3002; // Hardcode port agar tidak bentrok dengan .env
+sequelize.sync().then(() => {
+    console.log("Rental Database Synced");
+    app.listen(PORT, () => console.log(`Rental Service running on port ${PORT}`));
 });
 
 module.exports = app;
