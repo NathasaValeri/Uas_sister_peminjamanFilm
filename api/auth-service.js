@@ -1,63 +1,79 @@
+require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2');
+const { Sequelize, DataTypes } = require('sequelize');
 const cors = require('cors');
+
 const app = express();
-
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
-// 1. PERBAIKAN: Gunakan Pool & Tambahkan Konfigurasi SSL
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: 3306,
-    ssl: {
-        rejectUnauthorized: false // WAJIB untuk Clever Cloud
-    },
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+// --- KONEKSI DATABASE (OTOMATIS) ---
+const sequelize = new Sequelize(
+    process.env.DB_NAME, 
+    process.env.DB_USER, 
+    process.env.DB_PASSWORD, 
+    {
+        host: process.env.DB_HOST,
+        dialect: 'mysql',
+        port: 3306,
+        logging: false,
+        dialectOptions: {
+            ssl: { rejectUnauthorized: false }
+        }
+    }
+);
 
-// Gunakan promise wrapper agar lebih stabil
-const db = pool.promise();
+// --- MODEL USER ---
+const User = sequelize.define('User', {
+    username: { type: DataTypes.STRING, allowNull: false },
+    email: { type: DataTypes.STRING, unique: true, allowNull: false },
+    password: { type: DataTypes.STRING, allowNull: false }
+}, { timestamps: false });
 
-// 2. Endpoint Register
+// --- ENDPOINT REGISTER ---
 app.post('/auth/register', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ message: "Email dan Password harus diisi" });
-    }
-
     try {
-        const query = "INSERT INTO users (email, password) VALUES (?, ?)";
-        await db.execute(query, [email, password]);
-        res.status(200).json({ message: "User Terdaftar!" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Gagal Register", error: err.message });
+        const { username, email, password } = req.body;
+        
+        // Cek jika user sudah ada
+        const userExists = await User.findOne({ where: { email } });
+        if (userExists) {
+            return res.status(400).json({ message: "Email sudah terdaftar!" });
+        }
+
+        const newUser = await User.create({ username, email, password });
+        res.status(201).json({ message: "User Terdaftar!", user: newUser });
+    } catch (error) {
+        res.status(500).json({ message: "Gagal daftar", error: error.message });
     }
 });
 
-// 3. Endpoint Login
+// --- ENDPOINT LOGIN ---
 app.post('/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    
     try {
-        const query = "SELECT * FROM users WHERE email = ? AND password = ?";
-        const [results] = await db.execute(query, [email, password]);
+        const { email, password } = req.body;
+        const user = await User.findOne({ where: { email, password } });
 
-        if (results.length > 0) {
-            res.status(200).json({ message: "Login Berhasil", user: results[0] });
+        if (user) {
+            res.json({ 
+                message: "Login Berhasil", 
+                user: { id: user.id, username: user.username, email: user.email } 
+            });
         } else {
             res.status(401).json({ message: "Email atau Password Salah" });
         }
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Error Server", error: err.message });
+    } catch (error) {
+        res.status(500).json({ message: "Terjadi kesalahan server", error: error.message });
     }
 });
 
-module.exports = app;
+// --- SYNC & RUN SERVER ---
+const PORT = process.env.PORT || 3000;
+sequelize.sync().then(() => {
+    console.log("Database & Tabel Berhasil Disinkronisasi");
+    app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
+}).catch(err => {
+    console.error("Gagal koneksi ke database:", err);
+});
+
+module.exports = app; 
