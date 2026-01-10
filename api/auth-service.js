@@ -7,17 +7,19 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- KONEKSI DATABASE (OTOMATIS) ---
+// --- KONEKSI DATABASE (OTOMATIS CLEVER CLOUD) ---
 const sequelize = new Sequelize(
-    process.env.DB_NAME, 
-    process.env.DB_USER, 
-    process.env.DB_PASSWORD, 
+    // Menggunakan variabel standar dari Add-on MySQL Clever Cloud
+    process.env.MYSQL_ADDON_DB || process.env.DB_NAME, 
+    process.env.MYSQL_ADDON_USER || process.env.DB_USER, 
+    process.env.MYSQL_ADDON_PASSWORD || process.env.DB_PASSWORD, 
     {
-        host: process.env.DB_HOST,
+        host: process.env.MYSQL_ADDON_HOST || process.env.DB_HOST,
+        port: process.env.MYSQL_ADDON_PORT || 3306,
         dialect: 'mysql',
-        port: 3306,
         logging: false,
         dialectOptions: {
+            // Penting agar koneksi ke Clever Cloud stabil
             ssl: { rejectUnauthorized: false }
         }
     }
@@ -34,13 +36,10 @@ const User = sequelize.define('User', {
 app.post('/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        
-        // Cek jika user sudah ada
         const userExists = await User.findOne({ where: { email } });
         if (userExists) {
             return res.status(400).json({ message: "Email sudah terdaftar!" });
         }
-
         const newUser = await User.create({ username, email, password });
         res.status(201).json({ message: "User Terdaftar!", user: newUser });
     } catch (error) {
@@ -53,7 +52,6 @@ app.post('/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ where: { email, password } });
-
         if (user) {
             res.json({ 
                 message: "Login Berhasil", 
@@ -68,12 +66,13 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // --- SYNC & RUN SERVER ---
-const PORT = process.env.PORT || 3000;
-sequelize.sync().then(() => {
-    console.log("Database & Tabel Berhasil Disinkronisasi");
-    app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
-}).catch(err => {
-    console.error("Gagal koneksi ke database:", err);
-});
+// Jangan jalankan app.listen jika file ini di-require oleh index.js (menghindari port bentrok)
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    sequelize.sync().then(() => {
+        console.log("Database Sync (Auth Service)");
+        app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
+    }).catch(err => console.error("Database Error:", err));
+}
 
-module.exports = app; 
+module.exports = app;
