@@ -1,9 +1,7 @@
 {
   "version": 2,
+  "public": true,
   "rewrites": [
-    { "source": "/auth/(.*)", "destination": "/api/auth-service.js" },
-    { "source": "/movies/(.*)", "destination": "/api/movie-service.js" },
-    { "source": "/rentals/(.*)", "destination": "/api/rental-service.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
