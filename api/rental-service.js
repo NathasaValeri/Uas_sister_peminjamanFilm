@@ -23,19 +23,26 @@ const sequelize = new Sequelize(
 
 // --- MODEL RENTAL ---
 const Rental = sequelize.define('Rental', {
+    // Gunakan movie_id sesuai dengan kolom di PHPMyAdmin
     movie_id: { type: DataTypes.INTEGER, allowNull: false },
     customer_name: { type: DataTypes.STRING, allowNull: false }
 }, { 
-    timestamps: true // Kolom createdAt otomatis terisi tanggal & waktu
+    timestamps: true // Menghasilkan kolom createdAt & updatedAt secara otomatis
 });
 
 // 1. [CREATE] Catat Peminjaman Baru
 app.post('/rentals/add', async (req, res) => {
     try {
         const { movie_id, customer_name } = req.body;
-        const rental = await Rental.create({ movie_id, customer_name });
+        // Pastikan movie_id dikirim sebagai angka
+        const rental = await Rental.create({ 
+            movie_id: parseInt(movie_id), 
+            customer_name 
+        });
         res.status(201).json({ message: "Peminjaman dicatat", rental });
     } catch (err) {
+        // Log ini akan muncul di dashboard Clever Cloud menu "Logs"
+        console.error("Error saat simpan rental:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -68,7 +75,7 @@ app.put('/rentals/update/:id', async (req, res) => {
     }
 });
 
-// 4. [DELETE] Hapus/Selesaikan Peminjaman
+// 4. [DELETE] Hapus Peminjaman
 app.delete('/rentals/delete/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -84,11 +91,12 @@ app.delete('/rentals/delete/:id', async (req, res) => {
     }
 });
 
-// --- RUN SERVER ---
-// Hanya jalankan listen jika file ini dipanggil langsung
+// --- SYNC & RUN SERVER ---
+// Tambahkan proteksi agar tidak bentrok dengan index.js
 if (require.main === module) {
     const PORT = process.env.PORT || 3002;
-    sequelize.sync().then(() => {
+    // alter: true akan memperbaiki kolom tabel secara otomatis jika ada yang beda
+    sequelize.sync({ alter: true }).then(() => {
         console.log("Rental Database Synced");
         app.listen(PORT, () => console.log(`Rental Service running on port ${PORT}`));
     }).catch(err => console.log("DB Error: " + err));
