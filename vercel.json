@@ -1,12 +1,11 @@
 {
   "version": 2,
+  "public": true,
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/auth/login", "destination": "/api/auth-service.js" },
-    { "source": "/auth/register", "destination": "/api/auth-service.js" },
-    { "source": "/movies/all", "destination": "/api/movie-service.js" },
-    { "source": "/movies/add", "destination": "/api/movie-service.js" },
-    { "source": "/movies/delete/:id", "destination": "/api/movie-service.js" },
-    { "source": "/rentals/all", "destination": "/api/rental-service.js" },
-    { "source": "/rentals/add", "destination": "/api/rental-service.js" }
+    { "source": "/auth/(.*)", "destination": "api/auth-service.js" },
+    { "source": "/movies/(.*)", "destination": "api/movie-service.js" },
+    { "source": "/rentals/(.*)", "destination": "api/rental-service.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
