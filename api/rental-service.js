@@ -7,43 +7,72 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- KONEKSI DATABASE ---
-const sequelize = new Sequelize(
-    process.env.MYSQL_ADDON_DB || 'bwzvhs015jo4jophzplb', 
-    process.env.MYSQL_ADDON_USER, 
-    process.env.MYSQL_ADDON_PASSWORD, 
-    {
-        host: process.env.MYSQL_ADDON_HOST, 
-        dialect: 'mysql',
-        port: process.env.MYSQL_ADDON_PORT || 3306,
-        logging: false,
-        dialectOptions: { ssl: { rejectUnauthorized: false } }
+// --- KONFIGURASI KONEKSI DATABASE (Kredensial Terbaru) ---
+const DB_NAME = process.env.MYSQL_ADDON_DB || 'bwzvhs015jo4jophzplb';
+const DB_USER = process.env.MYSQL_ADDON_USER || 'unzdnmar9xi9kwzh';
+const DB_PASS = process.env.MYSQL_ADDON_PASSWORD || 'ZPEQYCF6ec6I2j3e47MU';
+const DB_HOST = process.env.MYSQL_ADDON_HOST || 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com';
+const DB_PORT = process.env.MYSQL_ADDON_PORT || 3306;
+
+const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
+    host: DB_HOST,
+    dialect: 'mysql',
+    port: DB_PORT,
+    logging: false,
+    dialectOptions: {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    },
+    pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
     }
-);
+});
 
 // --- MODEL RENTAL ---
 const Rental = sequelize.define('Rental', {
-    movie_id: { type: DataTypes.INTEGER, allowNull: false },
-    customer_name: { type: DataTypes.STRING, allowNull: false }
-}, { 
+    movie_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    customer_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
+}, {
     timestamps: true,
-    freezeTableName: true // Memaksa nama tabel tetap 'Rental' (bukan Rentals)
+    freezeTableName: true 
 });
 
 // --- ENDPOINTS ---
+
+app.get('/', (req, res) => {
+    res.send("Rental Service is Running and Connected to Cloud!");
+});
+
+// Create: Catat Peminjaman
 app.post('/rentals/add', async (req, res) => {
     try {
         const { movie_id, customer_name } = req.body;
-        const rental = await Rental.create({ 
-            movie_id: parseInt(movie_id), 
-            customer_name 
+        if (!movie_id || !customer_name) {
+            return res.status(400).json({ error: "Data tidak lengkap!" });
+        }
+
+        const newRental = await Rental.create({
+            movie_id: parseInt(movie_id),
+            customer_name: customer_name
         });
-        res.status(201).json({ message: "Peminjaman dicatat", rental });
+
+        res.status(201).json({ message: "Peminjaman Berhasil!", data: newRental });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Read: Ambil Semua Data
 app.get('/rentals/all', async (req, res) => {
     try {
         const rentals = await Rental.findAll({ order: [['createdAt', 'DESC']] });
@@ -53,14 +82,29 @@ app.get('/rentals/all', async (req, res) => {
     }
 });
 
-// --- SYNC OTOMATIS ---
-if (require.main === module) {
-    const PORT = process.env.PORT || 3002;
-    // force: true akan menghapus dan membuat ulang tabel sesuai model di atas
-    sequelize.sync({ force: true }).then(() => {
-        console.log("Database Rental Berhasil Dibuat Otomatis!");
-        app.listen(PORT, () => console.log(`Rental Service running on port ${PORT}`));
-    }).catch(err => console.error("Gagal Sinkronisasi DB:", err));
-}
+// Delete: Hapus Riwayat
+app.delete('/rentals/delete/:id', async (req, res) => {
+    try {
+        await Rental.destroy({ where: { id: req.params.id } });
+        res.json({ message: "Data dihapus." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-module.exports = app;
+// --- RUN SERVER ---
+const PORT = process.env.PORT || 3002;
+
+sequelize.sync({ alter: true })
+    .then(() => {
+        console.log("---------------------------------------");
+        console.log("✅ DATABASE: Koneksi Berhasil (User: unzdnmar9xi9kwzh)");
+        console.log("✅ STATUS: Tabel Rental Siap!");
+        app.listen(PORT, () => {
+            console.log(`🚀 SERVER: Berjalan di port ${PORT}`);
+            console.log("---------------------------------------");
+        });
+    })
+    .catch(err => {
+        console.error("❌ KONEKSI GAGAL:", err.message);
+    });
