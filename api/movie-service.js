@@ -1,21 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
-const cors = require('cors');
 
-const app = express();
-app.use(express.json());
-app.use(cors());
+// GUNAKAN Router, jangan app baru agar bisa digabung di Gateway
+const router = express.Router();
 
-// --- KONEKSI DATABASE (OTOMATIS CLEVER CLOUD) ---
+// --- KONEKSI DATABASE ---
 const sequelize = new Sequelize(
-    process.env.MYSQL_ADDON_DB || 'bwzvhs015jo4jophzplb', // Fallback ke nama DB Anda
-    process.env.MYSQL_ADDON_USER, 
-    process.env.MYSQL_ADDON_PASSWORD, 
+    process.env.MYSQL_ADDON_DB || 'bwzvhs015jo4jophzplb', // Sesuaikan dengan variabel Clever Cloud
+    process.env.MYSQL_ADDON_USER || 'unzdnmar9xi9kwzh',
+    process.env.MYSQL_ADDON_PASSWORD || 'ZPEQYCF6ec6I2j3e47MU',
     {
-        host: process.env.MYSQL_ADDON_HOST, // Biarkan sistem yang mengisi ini
+        host: process.env.MYSQL_ADDON_HOST || 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com',
         dialect: 'mysql',
-        port: process.env.MYSQL_ADDON_PORT || 3306,
+        port: 3306,
         logging: false,
         dialectOptions: { 
             ssl: { rejectUnauthorized: false } 
@@ -30,8 +28,13 @@ const Movie = sequelize.define('Movie', {
     stock: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, { timestamps: false });
 
+// Sinkronisasi Tabel (Hanya jalankan di background)
+sequelize.sync();
+
+// --- ROUTES ---
+
 // 1. [CREATE] Tambah Film Baru
-app.post('/movies/add', async (req, res) => {
+router.post('/add', async (req, res) => {
     try {
         const { title, genre, stock } = req.body;
         const movie = await Movie.create({ title, genre, stock });
@@ -42,7 +45,7 @@ app.post('/movies/add', async (req, res) => {
 });
 
 // 2. [READ] Ambil Semua Film
-app.get('/movies/all', async (req, res) => {
+router.get('/all', async (req, res) => {
     try {
         const movies = await Movie.findAll();
         res.json(movies);
@@ -51,13 +54,12 @@ app.get('/movies/all', async (req, res) => {
     }
 });
 
-// 3. [UPDATE] Ubah Data Film (berdasarkan ID)
-app.put('/movies/update/:id', async (req, res) => {
+// 3. [UPDATE] Ubah Data Film
+router.put('/update/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, genre, stock } = req.body;
         const movie = await Movie.findByPk(id);
-        
         if (movie) {
             await movie.update({ title, genre, stock });
             res.json({ message: "Film berhasil diperbarui!", movie });
@@ -69,12 +71,11 @@ app.put('/movies/update/:id', async (req, res) => {
     }
 });
 
-// 4. [DELETE] Hapus Film (berdasarkan ID)
-app.delete('/movies/delete/:id', async (req, res) => {
+// 4. [DELETE] Hapus Film
+router.delete('/delete/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const movie = await Movie.findByPk(id);
-        
         if (movie) {
             await movie.destroy();
             res.json({ message: "Film berhasil dihapus!" });
@@ -86,14 +87,5 @@ app.delete('/movies/delete/:id', async (req, res) => {
     }
 });
 
-// --- RUN SERVER ---
-// Hanya jalankan app.listen jika file ini dijalankan langsung (bukan di-require)
-if (require.main === module) {
-    const PORT = process.env.PORT || 3001;
-    sequelize.sync().then(() => {
-        console.log("Movie Database & Table Synced");
-        app.listen(PORT, () => console.log(`Movie Service running on port ${PORT}`));
-    }).catch(err => console.log("DB Connection Error: " + err));
-}
-
-module.exports = app;
+// EXPORT router agar bisa dipakai di server.js
+module.exports = router;
