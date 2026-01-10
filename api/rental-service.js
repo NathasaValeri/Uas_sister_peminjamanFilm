@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Konfigurasi Database Sequelize
+// 1. Konfigurasi Database (Gunakan Environment Variables Vercel)
 const sequelize = new Sequelize(
     process.env.DB_NAME, 
     process.env.DB_USER,
@@ -18,11 +18,18 @@ const sequelize = new Sequelize(
         logging: false,
         dialectOptions: { 
             ssl: { rejectUnauthorized: false } 
+        },
+        // Optimasi untuk Vercel Serverless
+        pool: {
+            max: 5,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
         }
     }
 );
 
-// Model Rental
+// 2. Model Rental
 const Rental = sequelize.define('Rental', {
     movie_id: DataTypes.INTEGER,
     customer_name: DataTypes.STRING,
@@ -35,18 +42,22 @@ const Rental = sequelize.define('Rental', {
     timestamps: false 
 });
 
-// 1. Endpoint: Ambil Semua Data Peminjaman (GET /rentals/all)
-// SANGAT PENTING: Agar daftar di dashboard tidak kosong
+// OTO-SINKRON: Membuat tabel secara otomatis jika belum ada di Clever Cloud
+sequelize.sync()
+    .then(() => console.log("Tabel Rentals siap digunakan!"))
+    .catch(err => console.error("Gagal sinkronisasi DB Rentals: ", err));
+
+// 3. Endpoint: Ambil Semua Data Peminjaman (GET /rentals/all)
 app.get('/rentals/all', async (req, res) => {
     try {
         const rentals = await Rental.findAll();
         res.json(rentals);
     } catch (error) {
-        res.status(500).json({ message: "Gagal mengambil data peminjaman", error: error.message });
+        res.status(500).json({ message: "Gagal mengambil data", error: error.message });
     }
 });
 
-// 2. Endpoint: Tambah Peminjaman (POST /rentals/add)
+// 4. Endpoint: Tambah Peminjaman (POST /rentals/add)
 app.post('/rentals/add', async (req, res) => {
     try {
         const { movie_id, customer_name } = req.body;
@@ -61,12 +72,11 @@ app.post('/rentals/add', async (req, res) => {
         });
         res.status(200).json({ message: "Peminjaman berhasil dicatat", rental });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: "Gagal mencatat peminjaman", error: error.message });
     }
 });
 
-// 3. Endpoint: Hapus Peminjaman/Selesai (DELETE /rentals/delete/:id)
+// 5. Endpoint: Hapus Peminjaman (DELETE /rentals/delete/:id)
 app.delete('/rentals/delete/:id', async (req, res) => {
     try {
         const { id } = req.params;
