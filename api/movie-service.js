@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Konfigurasi Database
+// 1. Konfigurasi Database (Pastikan Environment Variables di Vercel sudah diisi)
 const sequelize = new Sequelize(
     process.env.DB_NAME, 
     process.env.DB_USER,
@@ -17,12 +17,21 @@ const sequelize = new Sequelize(
         port: 3306,
         logging: false,
         dialectOptions: {
-            ssl: { rejectUnauthorized: false }
+            ssl: { 
+                rejectUnauthorized: false // WAJIB untuk Clever Cloud
+            }
+        },
+        // Tambahan agar koneksi tidak mudah putus di Vercel
+        pool: {
+            max: 5,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
         }
     }
 );
 
-// Definisi Model Movie
+// 2. Definisi Model Movie
 const Movie = sequelize.define('Movie', {
     title: DataTypes.STRING,
     genre: DataTypes.STRING,
@@ -32,7 +41,12 @@ const Movie = sequelize.define('Movie', {
     timestamps: false 
 });
 
-// 1. Endpoint: Ambil Semua Film (GET /movies/all)
+// FUNGSI SINKRONISASI: Menjamin tabel ada di database
+sequelize.sync()
+    .then(() => console.log("Database & Tabel Movies siap!"))
+    .catch(err => console.error("Gagal sinkronisasi DB: ", err));
+
+// 3. Endpoint: Ambil Semua Film (GET /movies/all)
 app.get('/movies/all', async (req, res) => {
     try {
         const movies = await Movie.findAll();
@@ -42,7 +56,7 @@ app.get('/movies/all', async (req, res) => {
     }
 });
 
-// 2. Endpoint: Tambah Film Baru (POST /movies/add)
+// 4. Endpoint: Tambah Film Baru (POST /movies/add)
 app.post('/movies/add', async (req, res) => {
     try {
         const { title, genre, stock } = req.body;
@@ -55,7 +69,7 @@ app.post('/movies/add', async (req, res) => {
     }
 });
 
-// 3. Endpoint: Hapus Film (DELETE /movies/delete/:id)
+// 5. Endpoint: Hapus Film (DELETE /movies/delete/:id)
 app.delete('/movies/delete/:id', async (req, res) => {
     try {
         const { id } = req.params;
