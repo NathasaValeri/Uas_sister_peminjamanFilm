@@ -7,17 +7,19 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- KONEKSI DATABASE ---
+// --- KONEKSI DATABASE (OTOMATIS CLEVER CLOUD) ---
 const sequelize = new Sequelize(
-    process.env.DB_NAME || 'bwzvhs015jo4jophzplb',
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
+    process.env.MYSQL_ADDON_DB || 'bwzvhs015jo4jophzplb', // Fallback ke nama DB Anda
+    process.env.MYSQL_ADDON_USER, 
+    process.env.MYSQL_ADDON_PASSWORD, 
     {
-        host: 'bwzvhs015jo4jophzplb-mysql.services.clever-cloud.com',
+        host: process.env.MYSQL_ADDON_HOST, // Biarkan sistem yang mengisi ini
         dialect: 'mysql',
-        port: 3306,
+        port: process.env.MYSQL_ADDON_PORT || 3306,
         logging: false,
-        dialectOptions: { ssl: { rejectUnauthorized: false } }
+        dialectOptions: { 
+            ssl: { rejectUnauthorized: false } 
+        }
     }
 );
 
@@ -85,10 +87,13 @@ app.delete('/movies/delete/:id', async (req, res) => {
 });
 
 // --- RUN SERVER ---
-const PORT = process.env.PORT || 3001;
-sequelize.sync().then(() => {
-    console.log("Movie Database & Table Synced");
-    app.listen(PORT, () => console.log(`Movie Service running on port ${PORT}`));
-}).catch(err => console.log("DB Connection Error: " + err));
+// Hanya jalankan app.listen jika file ini dijalankan langsung (bukan di-require)
+if (require.main === module) {
+    const PORT = process.env.PORT || 3001;
+    sequelize.sync().then(() => {
+        console.log("Movie Database & Table Synced");
+        app.listen(PORT, () => console.log(`Movie Service running on port ${PORT}`));
+    }).catch(err => console.log("DB Connection Error: " + err));
+}
 
 module.exports = app;
